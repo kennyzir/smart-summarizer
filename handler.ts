@@ -145,6 +145,15 @@ function clampSentenceLimit(input: any): number {
   return DEFAULT_SENTENCE_LIMIT;
 }
 
+function extractInput(body: unknown): any {
+  const requestBody = body && typeof body === 'object' ? body as Record<string, unknown> : {};
+  const nested = requestBody.input;
+  if (nested && typeof nested === 'object') {
+    return nested;
+  }
+  return requestBody;
+}
+
 async function fetchUrlContent(url: string): Promise<SummarySource> {
   let parsed: URL;
 
@@ -253,15 +262,8 @@ function createSummary(source: SummarySource, style: SummaryStyle, maxSentences:
 }
 
 async function handler(req: VercelRequest, res: VercelResponse) {
-  const validation = validateInput(req.body, {
-    input: { type: 'object', required: true },
-  });
+  const input = extractInput(req.body);
 
-  if (!validation.valid) {
-    return errorResponse(res, 'Invalid input', 400, validation.errors);
-  }
-
-  const { input } = validation.data!;
   const startTime = Date.now();
 
   try {
@@ -304,5 +306,13 @@ async function handler(req: VercelRequest, res: VercelResponse) {
     return errorResponse(res, 'Summarization failed', 500, message);
   }
 }
+
+export const __testables = {
+  clampSentenceLimit,
+  createSummary,
+  extractInput,
+  fetchUrlContent,
+  inferStyle,
+};
 
 export default authMiddleware(handler);
